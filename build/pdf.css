@@ -1,0 +1,61 @@
+/* PDF styling for documents built with pandoc + weasyprint */
+@page {
+  size: A4;
+  margin: 2cm 2cm 2.2cm 2cm;
+  @bottom-left  { content: "RackWare"; font: 8pt "DejaVu Sans", Arial, sans-serif; color: #888; }
+  @bottom-right { content: counter(page); font: 8pt "DejaVu Sans", Arial, sans-serif; color: #888; }
+}
+:root { --blue: #1e9fd0; --navy: #212934; --gray: #5a5a5a; --light: #f2f4f6; }
+body { font: 10.5pt/1.45 "Carlito", "Calibri", "DejaVu Sans", Arial, sans-serif; color: #282828; }
+
+/* title page (pandoc title block from metadata.yaml) + table of contents */
+header#title-block-header { padding-top: 6cm; page-break-after: always; }
+header#title-block-header::before { content: "RACKWARE"; display: block; color: var(--blue); font-weight: bold; letter-spacing: 1pt; margin-bottom: 12pt; }
+h1.title { font-size: 30pt; color: var(--navy); margin: 0 0 10pt; line-height: 1.15; }
+p.subtitle { font-size: 14pt; color: var(--gray); margin: 0 0 30pt; }
+p.date { font-size: 10pt; color: var(--gray); margin: 0 0 6pt; }
+div.abstract { font-size: 9.5pt; color: var(--gray); }
+div.abstract-title { display: none; }
+nav#TOC { page-break-after: always; }
+nav#TOC h2#toc-title { margin-top: 0; }
+nav#TOC ul { list-style: none; padding-left: 0; }
+nav#TOC ul ul { padding-left: 14pt; }
+nav#TOC li { margin: 3pt 0; }
+nav#TOC a { color: #282828; text-decoration: none; }
+nav#TOC a::after { content: leader('.') target-counter(attr(href), page); }
+
+/* headings */
+h2 { font-size: 18pt; color: var(--navy); margin: 22pt 0 8pt; page-break-after: avoid; }
+h3 { font-size: 13.5pt; color: var(--blue); margin: 16pt 0 5pt; page-break-after: avoid; }
+h4 { font-size: 11.5pt; color: var(--navy); margin: 12pt 0 4pt; page-break-after: avoid; }
+
+/* images and figure captions */
+img { max-width: 100%; border: 0.75pt solid #c8cdd2; display: block; margin: 6pt auto 2pt; page-break-inside: avoid; }
+p:has(> img) { page-break-after: avoid; margin-bottom: 0; }
+p > em:only-child { display: block; text-align: center; font-size: 9pt; color: var(--gray); margin-bottom: 8pt; }
+
+/* tables */
+table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt; font-size: 9.5pt; page-break-inside: auto; }
+th { background: var(--navy); color: #fff; text-align: left; padding: 3pt 5pt; }
+td { border: 0.5pt solid #d2d6db; padding: 3pt 5pt; vertical-align: top; }
+tr:nth-child(even) td { background: var(--light); }
+td:first-child { font-weight: bold; }
+
+/* code */
+pre { background: var(--light); padding: 6pt 8pt; font: 8.8pt/1.35 "DejaVu Sans Mono", Consolas, monospace; white-space: pre-wrap; page-break-inside: avoid; }
+code { font-family: "DejaVu Sans Mono", Consolas, monospace; font-size: 9pt; }
+
+/* GitHub alert boxes ([!NOTE], [!TIP], [!WARNING]) */
+div.note, div.tip, div.warning, div.important, div.caution {
+  border-left: 3pt solid var(--gray); background: var(--light); padding: 4pt 9pt; margin: 6pt 0 10pt; page-break-inside: avoid;
+}
+div.tip     { border-color: #2ea043; background: #e9f7ec; }
+div.note    { border-color: var(--blue); background: #e8f5fc; }
+div.warning, div.important { border-color: #e69100; background: #fff6de; }
+div.title p { margin: 0 0 2pt; font-weight: bold; }
+div.tip .title p { color: #2ea043; }  div.note .title p { color: var(--blue); }  div.warning .title p { color: #e69100; }
+div.note > p:last-child, div.tip > p:last-child, div.warning > p:last-child { margin-bottom: 0; }
+
+ol, ul { padding-left: 20pt; }
+li { margin: 2pt 0; }
+a { color: var(--blue); }

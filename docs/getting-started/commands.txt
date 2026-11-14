@@ -1,0 +1,91 @@
+RackWare RMM 7.7 - Getting Started Guide - commands for copy and paste
+Replace values in <angle brackets> with your own. Lines starting with # are comments.
+
+### 3. Deploy RMM from the OCI Marketplace (recommended) > Step 8 -- Create the web-console user (all Marketplace listings)
+ssh -i <your-private-key> opc@<RMM-IP>
+sudo su -
+useradd admin                      # if it says the user exists, just run passwd
+passwd admin                       # choose the web console password
+ls /root/.ssh/id_rsa.pub || ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa   # RMM key used to reach your servers
+
+
+### 3. Deploy RMM from the OCI Marketplace (recommended) > Step 9 -- Add the DR disk to the RMM (DR only)
+lsblk                               # the new, empty disk appears without partitions (e.g. sdb)
+rwadm zfs configure                 # [A]dd the empty disk, then [F]inish
+rw pool show                        # shows the pool size and free space
+
+
+### 4. Alternative: install RMM on any Linux VM
+sudo dnf -y update && sudo reboot
+
+# Rocky Linux / RHEL (and Oracle Linux when uname -r does NOT contain "uek")
+sudo dnf -y install wget tar kernel-devel-$(uname -r)
+# Oracle Linux with the UEK kernel (uname -r contains "uek")
+sudo yum -y install wget tar kernel-uek-devel-$(uname -r)
+
+wget -O rackware-v7.7.x-x86_64.sh "<download link provided by RackWare>"
+chmod +x rackware-v7.7.x-x86_64.sh
+sudo ./rackware-v7.7.x-x86_64.sh
+
+sudo rwadm status all        # all services should be running
+sudo rw rmm show             # shows version, roles and license data
+
+
+### 5. License and first login > 5.1 Request and apply a license (BYOL and manual installs)
+rwadm relicense            # answer Y
+ls /etc/rackware/rwlicense_preinstall_*
+
+# on the RMM (replace opc with your login user on a manual install)
+cp /etc/rackware/rwlicense_preinstall_* /home/opc/ && chown opc /home/opc/rwlicense_preinstall_*
+# on your PC
+scp -i <your-private-key> opc@<RMM-IP>:rwlicense_preinstall_* .
+
+
+### 6. Connect RMM to your cloud (Cloud User) > 6.1 Prepare the OCI permissions (do this first) > Option A -- Instance principal
+ALL {instance.id = '<OCID of the RMM instance>'}
+
+
+### 6. Connect RMM to your cloud (Cloud User) > 6.1 Prepare the OCI permissions (do this first) > Option B -- API key
+mkdir -p /root/.oci && cd /root/.oci
+openssl genrsa -out oci_api_key.pem 2048 && chmod go-rwx oci_api_key.pem
+openssl rsa -pubout -in oci_api_key.pem -out oci_api_key_public.pem
+cat oci_api_key_public.pem        # paste in OCI: your user -> API keys -> Add API key
+openssl rsa -pubout -outform DER -in oci_api_key.pem | openssl md5 -c   # fingerprint
+
+
+### 6. Connect RMM to your cloud (Cloud User) > 6.1 Prepare the OCI permissions (do this first) > Policy statements
+Allow dynamic-group RackWareRMM to read instance-images in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to manage instances in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to inspect vcns in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to use subnets in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to inspect private-ips in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to read public-ips in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to use vnics in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to inspect vnic-attachments in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to inspect compartments in tenancy
+# Servers with more than one disk also need:
+Allow dynamic-group RackWareRMM to manage volumes in compartment <target-compartment>
+Allow dynamic-group RackWareRMM to manage volume-attachments in compartment <target-compartment>
+
+
+### 7. Prepare your source servers > 7.1 Linux servers
+sudo useradd -m -s /bin/bash rackware
+
+cat /opt/rackware/docs/sudo-config.txt
+
+cat /root/.ssh/id_rsa.pub        # copy the whole line
+
+sudo -u rackware mkdir -p /home/rackware/.ssh
+sudo -u rackware vi /home/rackware/.ssh/authorized_keys   # paste the key line, save
+sudo chmod 700 /home/rackware/.ssh && sudo chmod 600 /home/rackware/.ssh/authorized_keys
+sudo restorecon -Rv /home/rackware/.ssh                  # only if SELinux is enabled
+
+sudo firewall-cmd --permanent --add-rich-rule='rule family=ipv4 source address=<RMM-IP>/32 port port=22 protocol=tcp accept'
+sudo firewall-cmd --reload
+
+ssh rackware@<source-IP> "sudo -n true && echo OK"
+
+
+### 7. Prepare your source servers > 7.2 Windows servers
+netsh advfirewall firewall add rule name=rw-tcp22-in dir=in action=allow protocol=TCP localport=22 profile=any
+

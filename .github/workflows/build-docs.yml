@@ -1,0 +1,46 @@
+name: Build documents
+
+# Builds PDF + DOCX for every document on each change.
+# Pushing a tag like "getting-started-v1.3" also creates a GitHub Release with the files attached.
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "build/**", ".github/workflows/**"]
+    tags: ["*-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pandoc and weasyprint
+        run: |
+          wget -q https://github.com/jgm/pandoc/releases/download/3.7.0.2/pandoc-3.7.0.2-1-amd64.deb
+          sudo dpkg -i pandoc-3.7.0.2-1-amd64.deb
+          sudo apt-get update -q
+          sudo apt-get install -y -q libpango-1.0-0 libpangoft2-1.0-0 fonts-dejavu fonts-crosextra-carlito
+          pip install --quiet weasyprint==67.0
+
+      - name: Build
+        run: bash build/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: documents
+          path: |
+            output/*.pdf
+            output/*.docx
+
+      - name: Create release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          doc="${GITHUB_REF_NAME%-v*}"
+          gh release create "$GITHUB_REF_NAME" "output/$doc.pdf" "output/$doc.docx" \
+            --title "$GITHUB_REF_NAME" --notes "Built from commit ${GITHUB_SHA::7}. See docs/$doc/CHANGELOG.md."
